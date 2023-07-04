@@ -1,7 +1,6 @@
-// TODO: add github documentation link here
+// Documentation: https://github.com/Rayzeq/libpanel/wiki
 // Useful links:
 //   - Drag & Drop example: https://gitlab.com/justperfection.channel/how-to-create-a-gnome-shell-extension/-/blob/master/example11%40example11.com/extension.js
-//   - Interface tutorial: https://gist.github.com/andyholmes/a2f41c7dc3330dddcde1ef610b2126f6
 
 const VERSION = 1;
 
@@ -601,6 +600,8 @@ if (global._libpanel) {
 		}
 
 		removeItem(item) {
+			if (!this._grid.get_children().includes(item)) console.error(`${get_extension_uuid()} tried to remove an item not in the panel`);
+
 			item.get_parent().remove_child(item);
 			if (item.menu) {
 				this.disconnect_named(item.menu);
@@ -609,6 +610,8 @@ if (global._libpanel) {
 		}
 
 		getColumnSpan(item) {
+			if (!this._grid.get_children().includes(item)) console.error(`${get_extension_uuid()} tried to get the column span of an item not in the panel`);
+
 			const value = new GObject.Value();
 			this._grid.layout_manager.child_get_property(this._grid, item, 'column-span', value);
 			const column_span = value.get_int();
@@ -617,6 +620,8 @@ if (global._libpanel) {
 		}
 
 		setColumnSpan(item, colSpan) {
+			if (!this._grid.get_children().includes(item)) console.error(`${get_extension_uuid()} tried to set the column span of an item not in the panel`);
+
 			this._grid.layout_manager.child_set_property(this._grid, item, 'column-span', colSpan);
 		}
 
