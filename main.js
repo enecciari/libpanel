@@ -523,8 +523,6 @@ if (global._libpanel) {
 				reactive: true,
 				// We want to set this later
 				container: null,
-				// I'm not sure this is necessary
-				// layout_manager: new Clutter.BinLayout(),
 			});
 			this._delegate = this;
 
@@ -546,6 +544,11 @@ if (global._libpanel) {
 				style_class: LibPanel._panel_grid._panel_style_class + ' quick-settings quick-settings-grid',
 				layout_manager: new QuickSettingsLayout(placeholder, { nColumns }),
 			});
+			// Force the grid to take up all the available width. I'm using a constraint because x_expand don't work
+			this._grid.add_constraint(new Clutter.BindConstraint({
+				coordinate: Clutter.BindCoordinate.WIDTH,
+				source: this,
+			}));
 			this.add_child(this._grid);
 			this.container = this._grid;
 			this._drag_actor = this._grid;
@@ -554,30 +557,11 @@ if (global._libpanel) {
 			this._dimEffect = new Clutter.BrightnessContrastEffect({ enabled: false });
 			this._grid.add_effect_with_name('dim', this._dimEffect);
 
-			// Don't know why, but by default the overlay isn't placed a the same coordinates as the grid
-			// so we force it into position.
 			this._overlay.add_constraint(new Clutter.BindConstraint({
-				coordinate: Clutter.BindCoordinate.Y,
-				source: this._grid,
-			}));
-			this._overlay.add_constraint(new Clutter.BindConstraint({
-				coordinate: Clutter.BindCoordinate.X,
-				source: this._grid,
-			}));
-
-			const overlay_width_constraint = new Clutter.BindConstraint({
 				coordinate: Clutter.BindCoordinate.WIDTH,
-				source: this._grid, // we need to use `this._grid` instead of just `this` because the size of `this` will be changed by popups
-				//                     since they are indirect children if `this`
-			});
-			this.connect_named(this, "stage-views-changed", () => {
-				if (this.get_stage() === null) return;
+				source: this._grid,
+			}));
 
-				const css = this.get_theme_node();
-				overlay_width_constraint.offset = css.get_padding(St.Side.RIGHT) + // which mean we need to acknowledge for the internal padding of `this`
-					css.get_padding(St.Side.LEFT);
-			});
-			this._overlay.add_constraint(overlay_width_constraint);
 			this.add_child(this._overlay);
 		}
 
