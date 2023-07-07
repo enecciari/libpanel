@@ -477,7 +477,7 @@ const PanelColumn = registerClass(class LibPanel_PanelColumn extends Semitranspa
 		});
 		this.connect_after_named(this, 'actor-removed', (_self, actor) => {
 			if (this.get_children().length === 0) this.add_constraint(this._width_constraint);
-			if (!actor.is_grid_item) return;
+			if (actor._keep_layout || !actor.is_grid_item) return;
 
 			array_remove(this._panel_layout, actor.name);
 		});
@@ -731,7 +731,9 @@ var LibPanel = class {
 	}
 
 	static removePanel(panel) {
+		panel._keep_layout = true;
 		panel.get_parent()?.remove_child(panel);
+		panel._keep_layout = undefined;
 	}
 
 	constructor() {
