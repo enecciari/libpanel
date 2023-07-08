@@ -185,11 +185,11 @@ const GridItem = superclass => {
 			),
 		},
 	}, class extends superclass {
-		constructor(name, ...args) {
+		constructor(panel_name, ...args) {
 			super(...args);
 
 			this.is_grid_item = true;
-			this.name = name;
+			this.panel_name = panel_name;
 
 			this._drag_handle = DND.makeDraggable(this);
 			this.connect_named(this._drag_handle, 'drag-begin', () => {
@@ -405,7 +405,7 @@ class PanelGrid extends PopupMenu {
 		}
 
 		for (const column of this.box.get_children()) {
-			if (column._panel_layout.indexOf(panel.name) > -1) {
+			if (column._panel_layout.indexOf(panel.panel_name) > -1) {
 				column._add_panel(panel);
 				return;
 			}
@@ -465,28 +465,28 @@ const PanelColumn = registerClass(class LibPanel_PanelColumn extends Semitranspa
 			if (this.get_children().length === 1) this.remove_constraint(this._width_constraint);
 			if (!actor.is_grid_item) return;
 
-			const prev_index = this._panel_layout.indexOf(actor.get_previous_sibling()?.name);
-			const index = this._panel_layout.indexOf(actor.name);
-			const next_index = this._panel_layout.indexOf(actor.get_next_sibling()?.name);
+			const prev_index = this._panel_layout.indexOf(actor.get_previous_sibling()?.panel_name);
+			const index = this._panel_layout.indexOf(actor.panel_name);
+			const next_index = this._panel_layout.indexOf(actor.get_next_sibling()?.panel_name);
 			// `actor` is in the layout but is misplaced
 			if (index > -1 && ((prev_index > -1 && index < prev_index) || (next_index > -1 && next_index < index))) {
-				array_remove(this._panel_layout, actor.name);
+				array_remove(this._panel_layout, actor.panel_name);
 				index = -1;
 			}
 			if (index < 0) { // `actor` is not in the layout
 				if (prev_index > -1)
-					array_insert(this._panel_layout, prev_index + 1, actor.name);
+					array_insert(this._panel_layout, prev_index + 1, actor.panel_name);
 				else if (next_index > 0)
-					array_insert(this._panel_layout, next_index - 1, actor.name);
+					array_insert(this._panel_layout, next_index - 1, actor.panel_name);
 				else
-					array_insert(this._panel_layout, 0, actor.name);
+					array_insert(this._panel_layout, 0, actor.panel_name);
 			}
 		});
 		this.connect_after_named(this, 'actor-removed', (_self, actor) => {
 			if (this.get_children().length === 0) this.add_constraint(this._width_constraint);
 			if (actor._keep_layout || !actor.is_grid_item) return;
 
-			array_remove(this._panel_layout, actor.name);
+			array_remove(this._panel_layout, actor.panel_name);
 		});
 
 		this.connect('destroy', () => this._is_destroyed = true);
@@ -509,9 +509,9 @@ const PanelColumn = registerClass(class LibPanel_PanelColumn extends Semitranspa
 	}
 
 	_add_panel(panel) {
-		const index = this._panel_layout.indexOf(panel.name);
+		const index = this._panel_layout.indexOf(panel.panel_name);
 		if (index > -1) {
-			const panels = this.get_children().map(children => children.name);
+			const panels = this.get_children().map(children => children.panel_name);
 			for (const panel_name of this._panel_layout.slice(0, index).reverse()) {
 				const children_index = panels.indexOf(panel_name);
 				if (children_index > -1) {
@@ -527,8 +527,11 @@ const PanelColumn = registerClass(class LibPanel_PanelColumn extends Semitranspa
 });
 
 var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.Widget)) {
-	constructor(name, nColumns = 2) {
-		super(`${get_extension_uuid()}/${name}`, {
+	constructor(panel_name, nColumns = 2) {
+		super(`${get_extension_uuid()}/${panel_name}`, {
+			// I have no idea why, but sometimes, a panel (not all of them) gets allocated too much space (behavior similar to `y-expand`)
+			// This prevent it from taking all available space
+			y_align: Clutter.ActorAlign.START,
 			// Enable this so the menu block any click event from propagating through
 			reactive: true,
 			// We want to set this later
@@ -835,7 +838,7 @@ var LibPanel = class {
 
 		const new_menu = new Panel('', 2);
 		// we do that to prevent the name being this: `quick-settings-audio-panel@rayzeq.github.io/gnome@main`
-		new_menu.name = 'gnome@main';
+		new_menu.panel_name = 'gnome@main';
 		this._move_quick_settings(this._old_menu, new_menu);
 		LibPanel.addPanel(new_menu);
 		this._main_panel = new_menu;
