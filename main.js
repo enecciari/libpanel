@@ -379,7 +379,14 @@ class PanelGrid extends PopupMenu {
 		this.actor.connect_after('notify::allocation', () => {
 			// The `setTimeout` fixes the following warning:
 			// Can't update stage views actor ... is on because it needs an allocation.
-			if (this.actor.x > 0) setTimeout(this._add_column.bind(this), 0);
+			if (this.actor.x > 0)
+				this._timeout_id = setTimeout(() => {
+					this._timeout_id = null;
+					this._add_column();
+				}, 0);
+		});
+		this.actor.connect('destroy', () => {
+			if (this._timeout_id) clearTimeout(this._timeout_id);
 		});
 	}
 
