@@ -651,10 +651,14 @@ QuickSettingsMenu.prototype.getItems = function () {
 QuickSettingsMenu.prototype.removeItem = function (item) {
 	this._grid.remove_child(item);
 	if (item.menu) {
-		// Manually remove the connection since we don't have its id.
-		for (const id of item.menu._signalConnectionsByName["open-state-changed"]) {
-			if (item.menu._signalConnections[id].callback.toString().includes("this._setDimmed")) {
-				item.menu.disconnect(id);
+		// it seems that some menus don't have _signalConnectionsByName (probably custom menus)
+		// we check it exists before using it
+		if (item.menu._signalConnectionsByName) {
+			// Manually remove the connection since we don't have its id.
+			for (const id of item.menu._signalConnectionsByName["open-state-changed"]) {
+				if (item.menu._signalConnections[id].callback.toString().includes("this._setDimmed")) {
+					item.menu.disconnect(id);
+				}
 			}
 		}
 
