@@ -594,6 +594,10 @@ var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.W
 				this._setDimmed(isOpen);
 			});
 		}
+		if (item._menuButton) {
+			item._menuButton._libpanel_y_expand_backup = item._menuButton.y_expand;
+			item._menuButton.y_expand = false;
+		}
 	}
 
 	removeItem(item) {
@@ -603,6 +607,10 @@ var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.W
 		if (item.menu) {
 			this.disconnect_named(item.menu);
 			item.menu.actor.get_parent().remove_child(item.menu.actor);
+		}
+		if (item._menuButton) {
+			item._menuButton.y_expand = item._menuButton._libpanel_y_expand_backup;
+			item._menuButton._libpanel_y_expand_backup = undefined;
 		}
 	}
 
