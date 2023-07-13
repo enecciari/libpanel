@@ -5,5 +5,23 @@
     <key name="layout" type="aas">
       <default>[]</default>
     </key>
+    <key name="padding-enabled" type="b">
+      <default>false</default>
+    </key>
+    <key name="padding" type="i">
+      <default>18</default>
+    </key>
+    <key name="row-spacing-enabled" type="b">
+      <default>false</default>
+    </key>
+    <key name="row-spacing" type="i">
+      <default>12</default>
+    </key>
+    <key name="column-spacing-enabled" type="b">
+      <default>false</default>
+    </key>
+    <key name="column-spacing" type="i">
+      <default>12</default>
+    </key>
   </schema>
 </schemalist>

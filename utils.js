@@ -205,3 +205,24 @@ function get_settings(path) {
 	);
 	return new Gio.Settings({ settings_schema: source.lookup(id, true) });
 }
+
+function get_style(widget) {
+	return widget.style
+		?.split(';')
+		.map(x => {
+			const [name, value] = split(x, ':', 1).map(x => x.trim());
+			return { name, value };
+		})
+		.filter(x => x.name !== '') || [];
+}
+
+function set_style(widget, name, value) {
+	let style = get_style(widget).filter(x => x.name !== name);
+
+	if (value !== null)
+		style.push({ name, value });
+
+	widget.style = style
+		.map(({ name, value }) => `${name}: ${value}`)
+		.join(';');
+}

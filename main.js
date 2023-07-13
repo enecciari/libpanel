@@ -49,7 +49,8 @@ const { Patcher } = Self.patcher;
 const {
 	array_remove, array_insert,
 	get_extension_uuid, get_shell_version,
-	add_named_connections, find_panel, get_settings
+	add_named_connections, find_panel, get_settings,
+	set_style
 } = Self.utils;
 
 const VERSION = 1;
@@ -446,6 +447,10 @@ class PanelGrid extends PopupMenu {
 	_cleanup() {
 		while (this.box.last_child.get_children().length === 0) this.box.last_child.destroy();
 	}
+
+	_get_panels() {
+		return this.box.get_children().map(column => column.get_children()).flat();
+	}
 }
 
 const PanelColumn = registerClass(class LibPanel_PanelColumn extends Semitransparent(St.BoxLayout) {
@@ -744,10 +749,15 @@ var LibPanel = class {
 
 	static addPanel(panel) {
 		const instance = LibPanel.get_instance();
-		if (!instance) {
+		if (!instance)
 			console.error(`[LibPanel] ${get_extension_uuid()} tried to add a panel, but the library is disabled.`);
-		}
 
+		if (instance._settings.get_boolean('padding-enabled'))
+			set_style(panel._grid, 'padding', `${instance._settings.get_int('padding')}px`);
+		if (instance._settings.get_boolean('row-spacing-enabled'))
+			set_style(panel._grid, 'spacing-rows', `${instance._settings.get_int('row-spacing')}px`);
+		if (instance._settings.get_boolean('column-spacing-enabled'))
+			set_style(panel._grid, 'spacing-columns', `${instance._settings.get_int('column-spacing')}px`);
 		instance._panel_grid._add_panel(panel);
 		instance._save_layout();
 	}
@@ -768,6 +778,8 @@ var LibPanel = class {
 	}
 
 	_enable() {
+		this._settings = get_settings(`${Self.path}/org.gnome.shell.extensions.libpanel.gschema.xml`);
+
 		// ======================== Patching ========================
 		this._patcher = new Patcher();
 		// Permit disabling widget dragging
@@ -839,8 +851,6 @@ var LibPanel = class {
 		add_named_connections(this._patcher, GObject.Object);
 
 		// =================== Replacing the popup ==================
-		this._settings = get_settings(`${Self.path}/org.gnome.shell.extensions.libpanel.gschema.xml`);
-
 		this._panel_grid = new PanelGrid(QuickSettings);
 		for (const column of this._settings.get_value("layout").recursiveUnpack().reverse()) {
 			this._panel_grid._add_column(column);
@@ -863,7 +873,56 @@ var LibPanel = class {
 		this._panel_grid._overlay = new_menu._overlay;
 		this._panel_grid._setDimmed = new_menu._setDimmed.bind(new_menu);
 		this._panel_grid.addItem = new_menu.addItem.bind(new_menu);
-	}
+
+		// ================== Visual customization ==================
+		const set_style_for_panels = (name, value) => {
+			for (const panel of this._panel_grid._get_panels()) {
+				set_style(panel._grid, name, value);
+			}
+		};
+
+		this._settings.connect('changed::padding-enabled', () => {
+			if (this._settings.get_boolean('padding-enabled'))
+				set_style_for_panels('padding', `${this._settings.get_int('padding')}px`);
+			else
+				set_style_for_panels('padding', null);
+		});
+		this._settings.connect('changed::padding', () => {
+			if (!this._settings.get_boolean('padding-enabled')) return;
+			set_style_for_panels('padding', `${this._settings.get_int('padding')}px`);
+		});
+
+		this._settings.connect('changed::row-spacing-enabled', () => {
+			if (this._settings.get_boolean('row-spacing-enabled'))
+				set_style_for_panels('spacing-rows', `${this._settings.get_int('row-spacing')}px`);
+			else
+				set_style_for_panels('spacing-rows', null);
+		});
+		this._settings.connect('changed::row-spacing', () => {
+			if (!this._settings.get_boolean('row-spacing-enabled')) return;
+			set_style_for_panels('spacing-rows', `${this._settings.get_int('row-spacing')}px`);
+		});
+
+		this._settings.connect('changed::column-spacing-enabled', () => {
+			if (this._settings.get_boolean('column-spacing-enabled'))
+				set_style_for_panels('spacing-columns', `${this._settings.get_int('column-spacing')}px`);
+			else
+				set_style_for_panels('spacing-columns', null);
+		});
+		this._settings.connect('changed::column-spacing', () => {
+			if (!this._settings.get_boolean('column-spacing-enabled')) return;
+			set_style_for_panels('spacing-columns', `${this._settings.get_int('column-spacing')}px`);
+		});
+		// https://gjs-docs.gnome.org/gio20~2.0/gio.settings#signal-changed
+		// "Note that @settings only emits this signal if you have read key at
+		// least once while a signal handler was already connected for key."
+		this._settings.get_boolean('padding-enabled');
+		this._settings.get_boolean('row-spacing-enabled');
+		this._settings.get_boolean('column-spacing-enabled');
+		this._settings.get_int('padding');
+		this._settings.get_int('row-spacing');
+		this._settings.get_int('column-spacing');
+	};
 
 	_disable() {
 		this._move_quick_settings(this._main_panel, this._old_menu);
