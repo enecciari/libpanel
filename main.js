@@ -724,10 +724,10 @@ export var LibPanel = class {
 		return LibPanel.get_instance()?._enablers || [];
 	}
 
-	static enable() {
+	static enable(Config) {
 		let instance = LibPanel.get_instance();
 		if (!instance) {
-			instance = Main.panel._libpanel = new LibPanel();
+			instance = Main.panel._libpanel = new LibPanel(Config);
 			instance._enable();
 		};
 		if (instance.constructor.VERSION != VERSION)
@@ -771,13 +771,14 @@ export var LibPanel = class {
 		panel._keep_layout = undefined;
 	}
 
-	constructor() {
+	constructor(Config) {
 		this._enablers = [];
 
 		this._patcher = null;
 		this._settings = null;
 		this._panel_grid = null;
 		this._old_menu = null;
+		this.Config = Config;
 	}
 
 	_enable() {
@@ -786,14 +787,14 @@ export var LibPanel = class {
 		// ======================== Patching ========================
 		this._patcher = new Patcher();
 		// Permit disabling widget dragging
-		if (get_shell_version().major <= 44) {
+		if (get_shell_version(this.Config).major <= 44) {
 			this._patcher.replace_method(DND._Draggable, function _grabActor(wrapped, device, touchSequence) {
 				if (this._disabled) return;
 					wrapped(device, touchSequence);
 				});
 		}
 		// Backport from https://gitlab.gnome.org/GNOME/gnome-shell/-/merge_requests/2770
-		if (get_shell_version().major <= 44) {
+		if (get_shell_version(this.Config).major <= 44) {
 			this._patcher.replace_method(DND._Draggable, function _updateDragHover(_wrapped) {
 				this._updateHoverId = 0;
 				let target = this._pickTargetActor();

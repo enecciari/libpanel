@@ -1,6 +1,5 @@
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
-import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 
 export function split(string, sep, maxsplit) {
 	const splitted = string.split(sep);
@@ -45,7 +44,7 @@ export function get_extension_uuid() {
 	return undefined;
 }
 
-export function get_shell_version() {
+export function get_shell_version(Config) {
 	const [major, minor] = Config.PACKAGE_VERSION.split('.').map(s => Number(s));
 	return { major, minor };
 }
