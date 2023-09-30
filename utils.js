@@ -1,17 +1,18 @@
-const { GObject, Gio } = imports.gi;
-const Config = imports.misc.config;
+import Gio from 'gi://Gio';
+import GObject from 'gi://GObject';
+import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 
-function split(string, sep, maxsplit) {
+export function split(string, sep, maxsplit) {
 	const splitted = string.split(sep);
 	return maxsplit ? splitted.slice(0, maxsplit).concat([splitted.slice(maxsplit).join(sep)]) : splitted;
 }
 
-function rsplit(string, sep, maxsplit) {
+export function rsplit(string, sep, maxsplit) {
 	const splitted = string.split(sep);
 	return maxsplit ? [splitted.slice(0, -maxsplit).join(sep)].concat(splitted.slice(-maxsplit)) : splitted;
 }
 
-function array_remove(array, item) {
+export function array_remove(array, item) {
 	const index = array.indexOf(item);
 	if (index > -1) {
 		array.splice(index, 1);
@@ -20,11 +21,11 @@ function array_remove(array, item) {
 	return false;
 }
 
-function array_insert(array, index, ...items) {
+export function array_insert(array, index, ...items) {
 	array.splice(index, 0, ...items);
 }
 
-function get_stack() {
+export function get_stack() {
 	return new Error().stack.split('\n').slice(1).map(l => l.trim()).filter(Boolean).map(frame => {
 		const [func, remaining] = split(frame, '@', 1);
 		const [file, line, column] = rsplit(remaining, ':', 2);
@@ -32,7 +33,7 @@ function get_stack() {
 	});
 }
 
-function get_extension_uuid() {
+export function get_extension_uuid() {
 	const stack = get_stack();
 	for (const frame of stack.reverse()) {
 		if (frame.file.includes('/gnome-shell/extensions/')) {
@@ -44,12 +45,12 @@ function get_extension_uuid() {
 	return undefined;
 }
 
-function get_shell_version() {
+export function get_shell_version() {
 	const [major, minor] = Config.PACKAGE_VERSION.split('.').map(s => Number(s));
 	return { major, minor };
 }
 
-function add_named_connections(patcher, object) {
+export function add_named_connections(patcher, object) {
 	// this is used to debug things
 	/*function _get_address(object) {
 		return object.toString().slice(1, 15);
@@ -183,7 +184,7 @@ function add_named_connections(patcher, object) {
 	});
 }
 
-function find_panel(widget) {
+export function find_panel(widget) {
 	const panels = [];
 
 	do {
@@ -195,9 +196,13 @@ function find_panel(widget) {
 	return panels.at(-1);
 }
 
-function get_settings(path) {
+export function get_settings(path) {
+	if(path.startsWith("file://")) {
+	    path = path.substring(7);
+	}
 	const [parent_path, file] = rsplit(path, '/', 1);
 	const id = rsplit(file, '.', 2)[0];
+	Gio.SettingsSchemaSource.get_default();
 	const source = Gio.SettingsSchemaSource.new_from_directory(
 		parent_path,
 		Gio.SettingsSchemaSource.get_default(),
@@ -206,7 +211,7 @@ function get_settings(path) {
 	return new Gio.Settings({ settings_schema: source.lookup(id, true) });
 }
 
-function get_style(widget) {
+export function get_style(widget) {
 	return widget.style
 		?.split(';')
 		.map(x => {
@@ -216,7 +221,7 @@ function get_style(widget) {
 		.filter(x => x.name !== '') || [];
 }
 
-function set_style(widget, name, value) {
+export function set_style(widget, name, value) {
 	let style = get_style(widget).filter(x => x.name !== name);
 
 	if (value !== null)

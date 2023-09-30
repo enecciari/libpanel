@@ -1,14 +1,17 @@
 // Documentation: https://github.com/Rayzeq/libpanel/wiki
 // Useful links:
 //   - Drag & Drop example: https://gitlab.com/justperfection.channel/how-to-create-a-gnome-shell-extension/-/blob/master/example11%40example11.com/extension.js
+import St from 'gi://St';
+import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
+import Clutter from 'gi://Clutter';
+import Meta from 'gi://Meta';
 
-const { GLib, GObject, Clutter, Meta, St } = imports.gi;
-
-const DND = imports.ui.dnd;
-const Main = imports.ui.main;
-const { PopupMenu } = imports.ui.popupMenu;
-const { BoxPointer } = imports.ui.boxpointer;
-const { QuickSettingsMenu } = imports.ui.quickSettings;
+import { PopupMenu } from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as DND  from 'resource:///org/gnome/shell/ui/dnd.js';
+import { BoxPointer } from 'resource:///org/gnome/shell/ui/boxpointer.js';
+import { QuickSettingsMenu } from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
 const MenuManager = Main.panel.menuManager;
 const QuickSettings = Main.panel.statusArea.quickSettings;
@@ -24,7 +27,7 @@ const Self = function () {
 
 		const oldSearchPath = imports.searchPath.slice();
 		imports.searchPath = [path];
-		importer = imports[name];
+		const importer = imports[name];
 		imports.searchPath = oldSearchPath;
 		return importer;
 	}
@@ -45,13 +48,13 @@ const Self = function () {
 
 	return new Proxy({ path: libpanel_path }, handler);
 }();
-const { Patcher } = Self.patcher;
-const {
+import { Patcher } from './patcher.js';
+import {
 	array_remove, array_insert,
 	get_extension_uuid, get_shell_version,
 	add_named_connections, find_panel, get_settings,
 	set_style
-} = Self.utils;
+} from './utils.js';
 
 const VERSION = 1;
 // The spacing between elements of the grid, in pixels.
@@ -531,7 +534,7 @@ const PanelColumn = registerClass(class LibPanel_PanelColumn extends Semitranspa
 	}
 });
 
-var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.Widget)) {
+export var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.Widget)) {
 	constructor(panel_name, nColumns = 2) {
 		super(`${get_extension_uuid()}/${panel_name}`, {
 			// I have no idea why, but sometimes, a panel (not all of them) gets allocated too much space (behavior similar to `y-expand`)
@@ -689,7 +692,7 @@ QuickSettingsMenu.prototype.setColumnSpan = function (item, colSpan) {
 	this._grid.layout_manager.child_set_property(this._grid, item, 'column-span', colSpan);
 };
 
-var LibPanel = class {
+export var LibPanel = class {
 	static _AutoHidable = AutoHidable;
 	static _Semitransparent = Semitransparent;
 	static _GridItem = GridItem;
@@ -783,10 +786,12 @@ var LibPanel = class {
 		// ======================== Patching ========================
 		this._patcher = new Patcher();
 		// Permit disabling widget dragging
-		this._patcher.replace_method(DND._Draggable, function _grabActor(wrapped, device, touchSequence) {
-			if (this._disabled) return;
-			wrapped(device, touchSequence);
-		});
+		if (get_shell_version().major <= 44) {
+			this._patcher.replace_method(DND._Draggable, function _grabActor(wrapped, device, touchSequence) {
+				if (this._disabled) return;
+					wrapped(device, touchSequence);
+				});
+		}
 		// Backport from https://gitlab.gnome.org/GNOME/gnome-shell/-/merge_requests/2770
 		if (get_shell_version().major <= 44) {
 			this._patcher.replace_method(DND._Draggable, function _updateDragHover(_wrapped) {

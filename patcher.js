@@ -1,4 +1,4 @@
-var Patcher = class Patcher {
+export var Patcher = class Patcher {
 	constructor() {
 		this.patchs = {};
 	}
