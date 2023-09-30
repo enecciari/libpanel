@@ -366,6 +366,7 @@ class PanelGrid extends PopupMenu {
 
 		this._boxPointer.bin.set_child(this.box);
 		this.actor.add_style_class_name('popup-menu');
+		this.actor.add_style_class_name('QSAP-panel-grid');
 
 		global.focus_manager.add_group(this.actor);
 		this.actor.reactive = true;
