@@ -213,6 +213,9 @@ const GridItem = superclass => {
 				DND.addDragMonitor(this._drag_monitor);
 
 				this._drag_orig_index = this.get_parent().get_children().indexOf(this);
+				// dirty fix for Catppuccin theme (because it relys on CSS inheriting)
+				// this may not work with custom grid items
+				this.add_style_class_name?.("popup-menu");
 			});
 			// This is emited BEFORE drag-end, which means that this._dnd_placeholder is still available
 			this.connect_named(this._drag_handle, 'drag-cancelled', () => {
@@ -248,6 +251,7 @@ const GridItem = superclass => {
 				// so we undo that
 				this.width = -1;
 				this.height = -1;
+				this.remove_style_class_name?.("popup-menu");
 			});
 			this.connect_named(this, 'destroy', () => {
 				if (this._drag_monitor !== undefined) {
