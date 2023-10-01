@@ -602,6 +602,19 @@ var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.W
 
 			this.connect_named(item.menu, 'open-state-changed', (_, isOpen) => {
 				this._setDimmed(isOpen);
+				// The sub-popup for the power menu is too high.
+				// I don't know if it's the real source of the issue, but I suspect that the constraint that fixes its y position
+				// isn't accounting for the padding of the grid, so we add it to the offset
+				if (isOpen && this.getItems().indexOf(item) == 0) {
+					const constraint = item.menu.actor.get_constraints()[0];
+					constraint.offset = 
+						// the offset is normally bound to the height of the source
+						constraint.source.height
+						+ this._grid.get_theme_node().get_padding(St.Side.TOP);
+					// note: we don't reset this property when the item is removed from this panel because
+					// we hope that it will reset itself, which in the case in my tests, but maybe some issue will
+					// arise because of this
+				}
 			});
 		}
 		if (item._menuButton) {
