@@ -404,6 +404,13 @@ class PanelGrid extends PopupMenu {
 		this.actor.transparent = value;
 	}
 
+	close(animate) {
+		for (const column of this.box.get_children()) {
+			column._close(animate);
+		}
+		super.close(animate);
+	}
+
 	_add_panel(panel) {
 		if (this.box.get_children().length === 0) {
 			this._add_column()._add_panel(panel);
@@ -518,6 +525,12 @@ const PanelColumn = registerClass(class LibPanel_PanelColumn extends Semitranspa
 		});
 	}
 
+	_close(animate) {
+		for (const panel of this.get_children()) {
+			panel._close(animate);
+		}
+	}
+
 	_add_panel(panel) {
 		const index = this._panel_layout.indexOf(panel.panel_name);
 		if (index > -1) {
@@ -602,9 +615,10 @@ var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.W
 
 			this.connect_named(item.menu, 'open-state-changed', (_, isOpen) => {
 				this._setDimmed(isOpen);
+				this._activeMenu = isOpen ? item.menu : null;
 				// The sub-popup for the power menu is too high.
 				// I don't know if it's the real source of the issue, but I suspect that the constraint that fixes its y position
-				// isn't accounting for the padding of the grid, so we add it to the offset
+				// isn't accounting for the padding of the grid, so we add it to the offset manually
 				if (isOpen && this.getItems().indexOf(item) == 0) {
 					const constraint = item.menu.actor.get_constraints()[0];
 					constraint.offset = 
@@ -612,8 +626,8 @@ var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.W
 						constraint.source.height
 						+ this._grid.get_theme_node().get_padding(St.Side.TOP);
 					// note: we don't reset this property when the item is removed from this panel because
-					// we hope that it will reset itself, which in the case in my tests, but maybe some issue will
-					// arise because of this
+					// we hope that it will reset itself (because it's bound to the height of the source),
+					// which in the case in my tests, but maybe some issue will arise because of this
 				}
 			});
 		}
@@ -651,6 +665,10 @@ var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.W
 		if (!this._grid.get_children().includes(item)) console.error(`[LibPanel] ${get_extension_uuid()} tried to set the column span of an item not in the panel`);
 
 		this._grid.layout_manager.child_set_property(this._grid, item, 'column-span', colSpan);
+	}
+
+	_close(animate) {
+		this._activeMenu?.close(animate);
 	}
 
 	_get_ah_children() {
