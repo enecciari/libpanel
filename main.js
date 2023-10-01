@@ -619,7 +619,9 @@ var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.W
 				// The sub-popup for the power menu is too high.
 				// I don't know if it's the real source of the issue, but I suspect that the constraint that fixes its y position
 				// isn't accounting for the padding of the grid, so we add it to the offset manually
-				if (isOpen && this.getItems().indexOf(item) == 0) {
+				// Later: I added the name check because it breaks on the audio panel
+				// so I'm almost certain that this is not a proper fix
+				if (isOpen && this.getItems().indexOf(item) == 0 && this.panel_name == "gnome@main") {
 					const constraint = item.menu.actor.get_constraints()[0];
 					constraint.offset = 
 						// the offset is normally bound to the height of the source
