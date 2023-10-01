@@ -2,56 +2,33 @@
 // Useful links:
 //   - Drag & Drop example: https://gitlab.com/justperfection.channel/how-to-create-a-gnome-shell-extension/-/blob/master/example11%40example11.com/extension.js
 
-const { GLib, GObject, Clutter, Meta, St } = imports.gi;
+import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
+import St from 'gi://St';
 
-const DND = imports.ui.dnd;
-const Main = imports.ui.main;
-const { PopupMenu } = imports.ui.popupMenu;
-const { BoxPointer } = imports.ui.boxpointer;
-const { QuickSettingsMenu } = imports.ui.quickSettings;
+import { BoxPointer } from 'resource:///org/gnome/shell/ui/boxpointer.js';
+import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { PopupMenu } from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import { QuickSettingsMenu } from 'resource:///org/gnome/shell/ui/quickSettings.js';
+
+import { Patcher } from './patcher.js';
+import {
+	add_named_connections,
+	array_insert,
+	array_remove,
+	find_panel,
+	get_extension_uuid,
+	get_settings,
+	rsplit,
+	set_style,
+	split
+} from './utils.js';
 
 const MenuManager = Main.panel.menuManager;
 const QuickSettings = Main.panel.statusArea.quickSettings;
 const QuickSettingsLayout = QuickSettings.menu._grid.layout_manager.constructor;
-
-const Self = function () {
-	// See this link for explanations: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/misc/extensionUtils.js#:~:text=function-,installImporter,-(extension)
-	function create_importer(path) {
-		path = path.split('/');
-		if (path.at(-1) === '') path.pop();
-		const name = path.pop();
-		path = path.join('/');
-
-		const oldSearchPath = imports.searchPath.slice();
-		imports.searchPath = [path];
-		importer = imports[name];
-		imports.searchPath = oldSearchPath;
-		return importer;
-	}
-
-	const libpanel_path = new Error().stack.split('\n')[0] // first line of the call stack
-		.split('@').slice(1).join('@') // the first @ separate the function name and the file path
-		.split('/').slice(0, -1).join('/') + '/'; // the last item of the path is the current file, so we take the one just before
-	const Self = create_importer(libpanel_path);
-
-	const handler = {
-		get(target, name) {
-			if (name in target) {
-				return target[name];
-			}
-			return Self[name];
-		},
-	};
-
-	return new Proxy({ path: libpanel_path }, handler);
-}();
-const { Patcher } = Self.patcher;
-const {
-	array_remove, array_insert,
-	get_extension_uuid, get_shell_version,
-	add_named_connections, find_panel, get_settings,
-	set_style
-} = Self.utils;
 
 const VERSION = 1;
 // The spacing between elements of the grid, in pixels.
@@ -549,7 +526,7 @@ const PanelColumn = registerClass(class LibPanel_PanelColumn extends Semitranspa
 	}
 });
 
-var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.Widget)) {
+export var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidable(St.Widget)) {
 	constructor(panel_name, nColumns = 2) {
 		super(`${get_extension_uuid()}/${panel_name}`, {
 			// I have no idea why, but sometimes, a panel (not all of them) gets allocated too much space (behavior similar to `y-expand`)
@@ -725,7 +702,7 @@ QuickSettingsMenu.prototype.setColumnSpan = function (item, colSpan) {
 	this._grid.layout_manager.child_set_property(this._grid, item, 'column-span', colSpan);
 };
 
-var LibPanel = class {
+export class LibPanel {
 	static _AutoHidable = AutoHidable;
 	static _Semitransparent = Semitransparent;
 	static _GridItem = GridItem;
@@ -733,8 +710,6 @@ var LibPanel = class {
 	static _DropZone = DropZone;
 	static _PanelGrid = PanelGrid;
 	static _PanelColumn = PanelColumn;
-
-	static _importer = Self;
 
 	static get_instance() {
 		return Main.panel._libpanel;
@@ -814,75 +789,17 @@ var LibPanel = class {
 	}
 
 	_enable() {
-		this._settings = get_settings(`${Self.path}/org.gnome.shell.extensions.libpanel.gschema.xml`);
+		const this_path = '/' + split(rsplit(import.meta.url, '/', 1)[0], '/', 3)[3];;
+		this._settings = get_settings(`${this_path}/org.gnome.shell.extensions.libpanel.gschema.xml`);
 
 		// ======================== Patching ========================
 		this._patcher = new Patcher();
 		// Permit disabling widget dragging
-		this._patcher.replace_method(DND._Draggable, function _grabActor(wrapped, device, touchSequence) {
+		const _Draggable = DND.makeDraggable(new St.Widget()).constructor;
+		this._patcher.replace_method(_Draggable, function _grabActor(wrapped, device, touchSequence) {
 			if (this._disabled) return;
 			wrapped(device, touchSequence);
 		});
-		// Backport from https://gitlab.gnome.org/GNOME/gnome-shell/-/merge_requests/2770
-		if (get_shell_version().major <= 44) {
-			this._patcher.replace_method(DND._Draggable, function _updateDragHover(_wrapped) {
-				this._updateHoverId = 0;
-				let target = this._pickTargetActor();
-
-				let dragEvent = {
-					x: this._dragX,
-					y: this._dragY,
-					dragActor: this._dragActor,
-					source: this.actor._delegate,
-					targetActor: target,
-				};
-
-				let targetActorDestroyHandlerId;
-				let handleTargetActorDestroyClosure;
-				handleTargetActorDestroyClosure = () => {
-					target = this._pickTargetActor();
-					dragEvent.targetActor = target;
-					targetActorDestroyHandlerId =
-						target.connect('destroy', handleTargetActorDestroyClosure);
-				};
-				targetActorDestroyHandlerId =
-					target.connect('destroy', handleTargetActorDestroyClosure);
-
-				for (let i = 0; i < DND.dragMonitors.length; i++) {
-					let motionFunc = DND.dragMonitors[i].dragMotion;
-					if (motionFunc) {
-						let result = motionFunc(dragEvent);
-						if (result != DND.DragMotionResult.CONTINUE) {
-							global.display.set_cursor(DND.DRAG_CURSOR_MAP[result]);
-							dragEvent.targetActor.disconnect(targetActorDestroyHandlerId);
-							return GLib.SOURCE_REMOVE;
-						}
-					}
-				}
-				dragEvent.targetActor.disconnect(targetActorDestroyHandlerId);
-
-				while (target) {
-					if (target._delegate && target._delegate.handleDragOver) {
-						let [r_, targX, targY] = target.transform_stage_point(this._dragX, this._dragY);
-						// We currently loop through all parents on drag-over even if one of the children has handled it.
-						// We can check the return value of the function and break the loop if it's true if we don't want
-						// to continue checking the parents.
-						let result = target._delegate.handleDragOver(this.actor._delegate,
-							this._dragActor,
-							targX,
-							targY,
-							0);
-						if (result != DND.DragMotionResult.CONTINUE) {
-							global.display.set_cursor(DND.DRAG_CURSOR_MAP[result]);
-							return GLib.SOURCE_REMOVE;
-						}
-					}
-					target = target.get_parent();
-				}
-				global.display.set_cursor(Meta.Cursor.DND_IN_DRAG);
-				return GLib.SOURCE_REMOVE;
-			});
-		}
 		// Add named connections to objects
 		add_named_connections(this._patcher, GObject.Object);
 

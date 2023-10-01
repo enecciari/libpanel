@@ -1,7 +1,11 @@
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 
-import * as Config from 'resource:///org/gnome/Shell/Extensions/js/misc/config.js';
+try {
+	let Config = await import("resource:///org/gnome/Shell/Extensions/js/misc/config.js");
+} catch (e) {
+	let Config = await import("resource:///org/gnome/shell/misc/config.js");
+}
 
 export function split(string, sep, maxsplit) {
 	const splitted = string.split(sep);
