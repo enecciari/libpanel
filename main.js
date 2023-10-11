@@ -583,8 +583,21 @@ export var Panel = registerClass(class LibPanel_Panel extends GridItem(AutoHidab
 		return this._grid.get_children().filter(item => item != this._grid.layout_manager._overlay);
 	}
 
+	getFirstItem() {
+		return this.getItems[0];
+	}
+
 	addItem(item, colSpan = 1) {
 		this._grid.add_child(item);
+		this._completeAddItem(item, colSpan);
+	}
+
+	insertItemBefore(item, sibling, colSpan = 1) {
+		this._grid.insert_child_below(item, sibling);
+		this._completeAddItem(item, colSpan);
+	}
+
+	_completeAddItem(item, colSpan) {
 		this.setColumnSpan(item, colSpan);
 
 		if (item.menu) {
@@ -827,7 +840,10 @@ export class LibPanel {
 		this._panel_grid._grid = new_menu._grid;
 		this._panel_grid._overlay = new_menu._overlay;
 		this._panel_grid._setDimmed = new_menu._setDimmed.bind(new_menu);
+		this._panel_grid.getFirstItem = new_menu.getFirstItem.bind(new_menu);
 		this._panel_grid.addItem = new_menu.addItem.bind(new_menu);
+		this._panel_grid.insertItemBefore = new_menu.insertItemBefore.bind(new_menu);
+		this._panel_grid._completeAddItem = new_menu._completeAddItem.bind(new_menu);
 
 		// ================== Visual customization ==================
 		const set_style_for_panels = (name, value) => {

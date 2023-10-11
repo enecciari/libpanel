@@ -1,11 +1,9 @@
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 
-try {
-	let Config = await import("resource:///org/gnome/Shell/Extensions/js/misc/config.js");
-} catch (e) {
-	let Config = await import("resource:///org/gnome/shell/misc/config.js");
-}
+const Config = await import("resource:///org/gnome/shell/misc/config.js").catch(async () =>
+	await import("resource:///org/gnome/Shell/Extensions/js/misc/config.js")
+);
 
 export function split(string, sep, maxsplit) {
 	const splitted = string.split(sep);
